@@ -1,0 +1,7 @@
+@Controller()
+class AppController {
+  @Get()
+  getRootRoute() {
+    return 'Hello World';
+  }
+}
