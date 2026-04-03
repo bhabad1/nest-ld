@@ -1,6 +1,5 @@
 import {
   Body,
-  ClassSerializerInterceptor,
   Controller,
   Delete,
   Get,
@@ -9,6 +8,9 @@ import {
   Patch,
   Post,
   Query,
+  Session,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UsersService } from './users.service';
@@ -16,22 +18,49 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { Serialize } from '../interceptors/serialize.interceptor';
 import { UserDto } from './dtos/user.dto';
 import { AuthService } from './auth.service';
+import { User } from './user.entity';
+import { CurrentUser } from '../decorators/current-user.decorator';
+import { CurrentUserInterceptor } from './interceptors/current-user-interceptor';
+import { AuthGuard } from '../guards/auth.guard';
 
 @Controller('auth')
 @Serialize(UserDto)
+@UseInterceptors(CurrentUserInterceptor)
 export class UsersController {
   constructor(
     private userService: UsersService,
     private authService: AuthService,
   ) {}
+
+  //   @Get('/whoami')
+  //   whoami(@Session() session: any) {
+  //     return this.userService.findone(session.userId);
+  //   }
+
+  @UseGuards(AuthGuard)
+  @Get('/whoami')
+  whoami(@CurrentUser() user: User) {
+    console.log('whoami', user);
+    return user;
+  }
+
+  @Post('/signout')
+  signout(@Session() session: any) {
+    session.userId = null;
+  }
+
   @Post('/signup')
-  createUser(@Body() body: CreateUserDto) {
-    return this.authService.signup(body.email, body.password);
+  async createUser(@Body() body: CreateUserDto, @Session() session: any) {
+    const user = await this.authService.signup(body.email, body.password);
+    session.userId = user.id;
+    return user;
   }
 
   @Post('/signin')
-  signin(@Body() body: CreateUserDto) {
-    return this.authService.signin(body.email, body.password);
+  async signin(@Body() body: CreateUserDto, @Session() sessiuon: any) {
+    const user = await this.authService.signin(body.email, body.password);
+    sessiuon.userId = user.id;
+    return user;
   }
 
   //   @UseInterceptors(new SerializeInterceptor(UserDto))
